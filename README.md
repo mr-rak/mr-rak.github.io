@@ -83,7 +83,7 @@ body{
 const TEST_MODE = false;
 
 // Початок
-const START_TIME = "09:04:00";
+const START_TIME = "09:40:00";
 
 // Тривалість
 const DURATION = 60;
