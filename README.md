@@ -1,4 +1,3 @@
-# mr-rak.github.io
 <!DOCTYPE html>
 <html lang="uk">
 <head>
