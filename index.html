@@ -136,11 +136,12 @@ body{
 
 /*
 ==========================================
-АУДІО НЕ ПОТРІБНО ПОКАЗУВАТИ
+АУДІО
 ==========================================
 */
 
-#metronome{
+#metronome,
+#anthem{
 
     display:none;
 
@@ -180,6 +181,22 @@ body{
     <source
         src="metronome-with-long-period-per-minute.wav"
         type="audio/wav">
+
+</audio>
+
+
+<!-- ========================================
+     ДЕРЖАВНИЙ ГІМН УКРАЇНИ
+     
+     Файл повинен лежати поруч із index.html
+========================================= -->
+
+<audio id="anthem"
+       preload="auto">
+
+    <source
+        src="anthem.mp3"
+        type="audio/mpeg">
 
 </audio>
 
@@ -226,6 +243,7 @@ const PRAPOR =
 // ЕЛЕМЕНТИ
 // ==================================================
 
+
 const bg =
 document.getElementById("bg");
 
@@ -238,6 +256,10 @@ const metronome =
 document.getElementById("metronome");
 
 
+const anthem =
+document.getElementById("anthem");
+
+
 // ==================================================
 // СТАН
 // ==================================================
@@ -248,6 +270,11 @@ let currentScreen = "";
 // Чи вже запущений метроном
 
 let metronomeStarted = false;
+
+
+// Чи вже запущений гімн
+
+let anthemStarted = false;
 
 
 // Для тестового режиму
@@ -295,11 +322,6 @@ const END_SECONDS =
 
 function showPoster(seconds){
 
-    /*
-    Змінюємо картинку тільки один раз,
-    а не кожну секунду.
-    */
-
     if(currentScreen !== "poster"){
 
         bg.src = POSTER;
@@ -346,13 +368,16 @@ function showPRAPOR(){
 
 function startMetronome(){
 
-    /*
-    Не запускаємо повторно.
-    */
-
     if(metronomeStarted)
         return;
 
+
+    /*
+    На всякий случай
+    зупиняємо попереднє відтворення.
+    */
+
+    metronome.pause();
 
     metronome.currentTime = 0;
 
@@ -360,14 +385,6 @@ function startMetronome(){
     const promise =
         metronome.play();
 
-
-    /*
-    Android / Chrome може заблокувати
-    автоматичне відтворення.
-
-    Помилку просто виводимо в консоль,
-    щоб сторінка продовжувала працювати.
-    */
 
     if(promise !== undefined){
 
@@ -377,6 +394,13 @@ function startMetronome(){
                 "Не вдалося запустити метроном:",
                 error
             );
+
+            /*
+            Якщо браузер заблокував звук,
+            дозволяємо повторну спробу.
+            */
+
+            metronomeStarted = false;
 
         });
 
@@ -400,11 +424,76 @@ function stopMetronome(){
 
     metronome.pause();
 
-
     metronome.currentTime = 0;
 
-
     metronomeStarted = false;
+
+}
+
+
+// ==================================================
+// ЗАПУСК ГІМНУ
+// ==================================================
+
+function startAnthem(){
+
+    if(anthemStarted)
+        return;
+
+
+    /*
+    Починаємо гімн з початку.
+    */
+
+    anthem.pause();
+
+    anthem.currentTime = 0;
+
+
+    const promise =
+        anthem.play();
+
+
+    if(promise !== undefined){
+
+        promise.catch(function(error){
+
+            console.log(
+                "Не вдалося запустити Державний Гімн України:",
+                error
+            );
+
+            /*
+            Дозволяємо повторну спробу.
+            */
+
+            anthemStarted = false;
+
+        });
+
+    }
+
+
+    anthemStarted = true;
+
+}
+
+
+// ==================================================
+// ЗУПИНКА ГІМНУ
+// ==================================================
+
+function stopAnthem(){
+
+    if(!anthemStarted)
+        return;
+
+
+    anthem.pause();
+
+    anthem.currentTime = 0;
+
+    anthemStarted = false;
 
 }
 
@@ -438,7 +527,8 @@ function update(){
 
 
         /*
-        Перші 60 секунд
+        Перші 60 секунд:
+        60 → 59 → ... → 01
         */
 
         if(elapsed < DURATION){
@@ -461,10 +551,20 @@ function update(){
             startMetronome();
 
 
+            /*
+            Гімн у цей момент
+            не грає.
+            */
+
+            stopAnthem();
+
+
         }
 
+
         /*
-        Після 60 секунд
+        Після 60 секунд:
+        прапор + гімн
         */
 
         else{
@@ -472,6 +572,8 @@ function update(){
             showPRAPOR();
 
             stopMetronome();
+
+            startAnthem();
 
         }
 
@@ -514,7 +616,7 @@ function update(){
 
 
         /*
-        60 → 59 → 58 → ... → 01
+        60 → 59 → ... → 01
         */
 
         showPoster(
@@ -523,18 +625,58 @@ function update(){
 
 
         /*
-        Запускаємо WAV тільки один раз,
-        на початку хвилини.
+        Запускаємо метроном
+        один раз.
         */
 
         startMetronome();
+
+
+        /*
+        На хвилині мовчання
+        гімн не грає.
+        */
+
+        stopAnthem();
 
 
     }
 
 
     // ==================================================
-    // ДО / ПІСЛЯ ХВИЛИНИ
+    // ПІСЛЯ ХВИЛИНИ
+    // ==================================================
+
+    else if(
+        current >= END_SECONDS
+    ){
+
+
+        /*
+        Спочатку показуємо прапор.
+        */
+
+        showPRAPOR();
+
+
+        /*
+        Зупиняємо метроном.
+        */
+
+        stopMetronome();
+
+
+        /*
+        Запускаємо Гімн один раз.
+        */
+
+        startAnthem();
+
+    }
+
+
+    // ==================================================
+    // ДО 09:00
     // ==================================================
 
     else{
@@ -543,16 +685,9 @@ function update(){
         showPRAPOR();
 
 
-        /*
-        Після завершення хвилини
-        зупиняємо метроном.
-        */
+        stopMetronome();
 
-        if(current >= END_SECONDS){
-
-            stopMetronome();
-
-        }
+        stopAnthem();
 
     }
 
@@ -569,11 +704,6 @@ update();
 // ==================================================
 // ПЕРЕВІРКА ЧАСУ
 // ==================================================
-//
-// Кожну секунду.
-// Цифри прив'язані до системного часу,
-// тому накопичення похибки немає.
-// ==================================================
 
 setInterval(
     update,
@@ -582,7 +712,7 @@ setInterval(
 
 
 // ==================================================
-// ПОВЕРНЕННЯ ЗІ СНУ / ПЕРЕМИКАННЯ ВКЛАДКИ
+// ПОВЕРНЕННЯ ЗІ СНУ / ВКЛАДКИ
 // ==================================================
 
 document.addEventListener(
